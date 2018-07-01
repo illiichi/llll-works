@@ -4,8 +4,61 @@
            [llll-work.util :as u])
   (use [overtone.core]))
 
+llll.core/initialize
+
 (connect-external-server "localhost" 57110)
 (kill-server)
+
+
+
+(defsound hoge
+  {}
+  (splay (map (fn [freq phase]
+                (* (sin-osc freq)
+                   (env-gen (env-perc 0.05 0.5) (impulse 1/4 phase))))
+              (range 300 1000 100)
+              (range 0 1 0.01))))
+
+
+
+
+
+(l4/stop :hoge)
+
+(l4/stop :hoge)
+
+(l4/control :hoge :vol {:dur 16 :to 1})
+(l4/stop :hoge)
+
+(l4/control :hoge :vol {:dur 16 :to 0.0})
+
+[1 2 3]
+
+:hoge
+"hoge"
+'hoge
+(def x {:hoge 3, :fuga "a" "hoge" 4})
+
+x
+
+export PATH=~/bin:$PATH
+
+
+(let [x {:hoge 3, :fuga "a"}]
+  (:hoge x))
+
+(demo 10 (let [x 1
+               gate (impulse 1)
+               env (env-gen (envelope [1e-8 1 0.8 1e-8 1 0] [0.5 0.25 2 2 2] [:exp :lin]) :action FREE)
+               freq (* 440 (sin-osc 110))]
+           (splay (tanh (* (free-verb (rlpf (* (lf-pulse 2 0 1/16) (white-noise))
+                                            1000
+                                            0.1)
+                                      (mouse-x 0 1)
+                                      (lin-exp (lf-saw 1/2) -1 1 0.1 1))
+                           16)))))
+
+(* [1 2] [3 4])
 
 (do
   (recording-start (str "/home/maeda/code/clojure/llll-work/record/"
@@ -289,3 +342,4 @@
          [5/4 4 1 1/2 2/3 3/2]
          (u/n-range 0 1 6))))
  )
+

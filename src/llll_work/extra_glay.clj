@@ -1,4 +1,4 @@
-(ns llll-work.thai-kick
+(ns llll-work.extra-glay
   (require [llll.core :as l4]
            [llll.macro.defsound :refer :all]
            [llll-work.util :as u])
