@@ -1,13 +1,15 @@
 (ns llll-work.extra-glay
   (require [llll.core :as l4]
+           [llll.clay.clay :as cl]
            [llll.macro.defsound :refer :all]
+           [llll.macro.defpattern :refer :all]
            [llll-work.util :as u])
   (use [overtone.core]))
 
 (connect-external-server "localhost" 57110)
 (kill-server)
 
-(recording-start (str "/home/maeda/code/clojure/llll-works/record/"
+(recording-start (str "/home/maeda/code/clojure/llll-work/record/"
                       (.format (java.text.SimpleDateFormat. "yyyyMMdd_HHmmss") (java.util.Date.))
                       ".wav"))
 (recording-stop)
@@ -27,17 +29,17 @@
                             (bit-shift-right c)
                             (bit-and 2r0011)))))))
 
-
-(for [x (range 1 count)]
-  (->> (| :a*x)
-       (=| :freq (map (fn [y] (ranged-freq (/ (+ x y) 16)))))))
+(def option {:state {:initial (update-state {:count 0})
+                     :update update-state}
+             :swap-option {:switch-fade-in 0
+                           :switch-fade-out 0
+                           :fade-out-dur 32}
+             :synth-option {:type :detune}
+             :period 64})
 
 (defsound two-tone
-  {:state {:initial (update-state {:count 0})
-           :update update-state}
-   :synth-option {:type :detune}
-   :period 64}
-  [(section {:dur 7}
+  option
+  [(section {:dur 0}                     ; guwa
             (let [freq-base (u/rg-exp (sin-osc (!! (+ 3.3 c0))) 100 2000)
                   snd (u/m-map #(let [gate (lf-pulse % 1/2 (!! (if b1 1/4 3/4)))
                                       freq (latch:ar freq-base gate)]
@@ -50,7 +52,8 @@
               (-> snd
                   (u/reduce-> (fn [acc x] (sin-osc (* acc x freq))) [1 3 1/4 1/2 4])
                   (* 8) distort)))
-   (section (let [freq (u/rg-exp (u/m-map lf-saw [2.3 3.8 2.8])
+   (section {:dur 1}                    ; hi-yo
+            (let [freq (u/rg-exp (u/m-map lf-saw [2.3 3.8 2.8])
                                  (!! (if b1 100 800))
                                  (!! (if b0 4880 2800)))
                   snd (mix (sin-osc (* dr [1200 3200 640])))]
@@ -62,31 +65,31 @@
                   (free-verb 1 10)
                   (* 8) distort)))])
 
+(l4/stop :two-tone)
+
+(l4/control :two-tone :vol {:dur 16 :to 0.5})
+
+(comment (defsound two-tone
+   {:state {:initial (update-state {:count 0})
+            :update update-state}
+    :synth-option {:type :detune}
+    :period 32}
+   (let [freq (lin-lin (lf-pulse (u/dt:kr :t8 [:f4 :f2 :f8])) 0 1 800 950)
+         base-freq (u/rg-lin (u/m-map lf-pulse [1/10 0.34 0.25 2.5])
+                             (* 4 freq) (* 10 freq dr))
+         snd (mix (sin-osc (* dr base-freq [1 3/2 (!! (if b0 7/3 5/2))])))]
+     (-> snd
+         (u/switch-> (!! (= c0 3))
+                     (u/reduce-> (fn [acc x] (sin-osc (* acc x freq))) [3/2 2]))
+         (u/reduce-> (fn [acc x] (ringz acc x (!! (if b3 0.01 0.08))))
+                     [freq base-freq (* 3/2 base-freq)])
+         (free-verb 0.4 1)
+         (* 4) distort))))
 
 (defsound two-tone
-  {:state {:initial (update-state {:count 0})
-           :update update-state}
-   :synth-option {:type :detune}
-   :period 32}
-  (let [freq (lin-lin (lf-pulse (u/dt:kr :t8 [:f4 :f2 :f8])) 0 1 800 950)
-        base-freq (u/rg-lin (u/m-map lf-pulse [1/10 0.34 0.25 2.5])
-                            (* 4 freq) (* 10 freq dr))
-        snd (mix (sin-osc (* dr base-freq [1 3/2 (!! (if b0 7/3 5/2))])))]
-    (-> snd
-        (u/switch-> (!! (= c0 3))
-                    (u/reduce-> (fn [acc x] (sin-osc (* acc x freq))) [3/2 2]))
-        (u/reduce-> (fn [acc x] (ringz acc x (!! (if b3 0.01 0.08))))
-                    [freq base-freq (* 3/2 base-freq)])
-        (free-verb 0.4 1)
-        (* 4) distort)))
-
-(defsound two-tone
-  {:state {:initial (update-state {:count 0})
-           :update update-state}
-   :synth-option {:type :detune}
-   :period 64}
+  option
   [(section
-    {:dur 1}
+    {:dur 7}
     (-> (u/m-map #(let [gate (lf-pulse (* :f2 %) 1/2 (!! (if b0 1/12 3/4)))
                         freq (latch:ar (u/rg-exp (sin-osc 0.3) 100 1000) gate)]
                     (-> (sin-osc (* dr freq %2))
@@ -116,11 +119,11 @@
 
 
 
+
+
+
 (defsound two-tone
-  {:state {:initial (update-state {:count 0})
-           :update update-state}
-   :synth-option {:type :detune}
-   :period 64}
+  option
   [(section {:dur 1}
             (let [snd (u/m-map #(let [gate (lf-pulse %2 1/2 (!! (if b0 1/8 3/4)))
                                     freq (latch:ar (u/rg-exp (sin-osc 3.3)
@@ -135,13 +138,14 @@
                                                   (ringz  y 0.02))) [0.01 0.02] [(!! (* c0 1000))
                                                                                  (!! (if b0 4000 3000))])
                   (* 8) distort)))
-   (section (let [snd (rlpf (white-noise) (* dr [1200 1800]) 0.0001)
-                  freq (u/rg-exp (u/m-map lf-pulse [(!! (if b0 10.3 2.8))
-                                                (!! (if b1 0.8 0.6))]) 80 1800)]
-              (-> snd
-                  (u/reduce-> (fn [acc x] (sin-osc (* acc x freq))) [1/2 1 2])
-                  (free-verb (!! (if b1 1 0.3)) (!! (if b2 1 0.5)))
-                  (* 8) distort)))])
+   (section {:dur 1}                    ;gao
+    (let [snd (rlpf (white-noise) (* dr [1200 1800]) 0.0001)
+          freq (u/rg-exp (u/m-map lf-pulse [(!! (if b0 10.3 2.8))
+                                            (!! (if b1 0.8 0.6))]) 80 1800)]
+      (-> snd
+          (u/reduce-> (fn [acc x] (sin-osc (* acc x freq))) [1/2 1 2])
+          (free-verb (!! (if b1 1 0.3)) (!! (if b2 1 0.5)))
+          (* 8) distort)))])
 
 (defsound two-tone
   {:state {:initial (update-state {:count 0})
@@ -203,6 +207,8 @@
           (u/reduce-> (fn [acc x] (sin-osc (* acc x))) [300 (* 1/4 freq) freq])
           (* 8) distort)))])
 
+(l4/control :two-tone :vol {:dur 16 :to 0.01})
+
 
 (defsound two-tone
   {:state {:initial (update-state {:count 0})
@@ -237,4 +243,33 @@
                                 [0.2 0.5 0.01]))
         (* 8)
         distort))])
+
+
+(defsynth-l4 bang
+  [freq 30 long 2]
+  {:type :detune}
+  (* (bpf (gray-noise) (* dr freq) 1)
+     (env-gen (env-perc 0.01 dur) :action FREE)))
+
+(def range-freq (partial  u/map-square 100 8000))
+(defpattern bang
+  {:table {:a (synth bang)}
+   :state {:initial {:n 4}
+           :update (fn [m]
+                     (update m :n #(if (< % 18) (inc %) 4)))}
+   :period 64}
+  (cl/->Clay
+   (for [x (range 1 n)
+         y (range x)]
+     (cl/->Child (/ y x)
+                 (+ (/ y x) (/ 1 x))
+                 :a
+                 {:freq (range-freq (/ (+ x y) 16))
+                  :long 1
+                  :vol 1/2}))))
+
+
+
+(l4/control :bang :vol {:dur 16 :to 0})
+
 

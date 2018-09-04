@@ -7,8 +7,3 @@
   :jvm-opts ^:replace []
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [llll "0.1.0"]])
-<<<<<<< HEAD
-
-
-=======
->>>>>>> wip
