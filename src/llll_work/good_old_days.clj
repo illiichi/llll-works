@@ -977,8 +977,8 @@
         freq-max  (env-gen (envelope [10000 10000 1000 1000 10000] [2 5 3 6]) big-gate)
         ;; (rg-exp (m-map lf-pulse [0.7 3.2 1.3 8.3]) 1000 10000)
         freq-min (env-gen (envelope [100 100 800 2000 5000] [2 8 2 4]) big-gate)]
-    (tanh (* 30 (mix (repeatedly 30 #(let [gate (impulse 16 (rand 1))]
-                                       (* (pulse (* dr (latch:ar (rg-exp (lf-noise1 8) freq-min freq-max) gate)))
+    (tanh (* 30 (mix (let [gate (impulse 16 (rand 1))]
+                       (repeatedly 30 #(* (pulse (* dr (latch:ar (rg-exp (lf-noise1 8) freq-min freq-max) gate)))
                                           (env-gen (env-perc 0.05 0.2) gate)))))))))
 ;; 2017.06.09
 (defsound test option-d
@@ -2218,7 +2218,7 @@
         (n-range 0.5 7 8))))
 
 ;; 2018.02.23  (like) simple but ...
-(defsound test option
+(defsound test option-d
   (m-map #(let [freq (rg-exp (lf-saw (dt:kr 4 [-1/4 25 80]) %2) 100 %)]
                (rlpf (white-noise) freq 0.01))
             (n-range 1000 8000 8)
@@ -2698,8 +2698,8 @@
 
 ;; 2018.08.08
 (defsound test option-d
-  (reduce (fn [acc x] (sin-osc (* x acc))) (sin-osc (* 100))
-          [2000 8000 500 ]))
+  (reduce (fn [acc x] (sin-osc (*  x acc))) (sin-osc (* 100))
+          [2000 8000 500]))
 
 ;; 2018.08.08
 (defsound test option-d
@@ -2772,8 +2772,3 @@
              (* dr (dq env [8000 6700 6700 6700 3350]))
              (dq env [0.5 0.2 0.8]))
        env)))
-
-
-
-
-

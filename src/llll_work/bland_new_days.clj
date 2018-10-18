@@ -8,9 +8,12 @@
   (use [overtone.core]))
 
 (connect-external-server "localhost" 57110)
+(connect-external-server "192.168.100.255" 57110)
+(connect-external-server "192.168.100.255" 57110)
+
 (kill-server)
 (l4/finish)
-
+(demo (sin-osc [660 1320]))
 (l4/initialize {})
 
 (defn update-state [{:keys [count]}]
@@ -236,7 +239,7 @@
       (distort)))
 
 (defpattern test-control
-  {:table {:f1 (control :test :-ratio)}
+  {:table {:f1 (control :test :-freq)}
    :period 128}
   (-> (| :f1)
       (--> 100 [10] >> 10 [20] >> 1000)))
@@ -311,8 +314,6 @@
                (u/dt:kr 2 [8 48])]
               [0.01 0.02 0.1])))
 
-(l4/control :test :vol {:dur 16 :to -2.3401365E-14})
-
 
 (defsynth-l4 test-synth
   [freq 440 long 1]
@@ -332,9 +333,53 @@
                  (=| :freq (map midi->hz %1)))
            [[77 79] [77 72] ])))
 
+;; 2018.09.08
+(defsound test option
+  (let [min-freq (u/rg-exp (sin-osc 0.008) 3 500)
+        max-freq (u/rg-lin (lf-noise0 1/8) 1200 4800)
+        snd (u/m-map #(* (sin-osc (+ min-freq (* %1 max-freq)))
+                         (env-gen (env-perc 0.05 0.5) (impulse 1 %))
+                         (env-gen (env-perc 0.0025 0.05) (impulse 16)))
+                     (u/n-range 0 1 8))
+        pan (u/rg-lin (sin-osc 0.01) 0 1)]
+    [(* pan snd)
+     (* (- 1 pan) snd)]))
 
+;; 2018.09.10
+(defsound test option
+  (splay (let [f (lag-ud (u/m-map #(u/rg-lin (lf-pulse %) 0 %2)
+                                  [8 2 16 3 7 1/2]
+                                  [50 180 32 66 82 100])
+                         0.02 0.1)
+               gate-freq (u/rg-exp (lf-saw:kr 0.01) 0.05 10)]
+           (map (fn [freq phase]
+                  (let [gate (impulse gate-freq phase)]
+                    (* (sin-osc (+ f freq))
+                       (env-gen (env-perc 0.05 0.5) gate))))
+                (concat (reverse (u/n-range 880 4800 8))
+                        (u/n-range 880 4800 8))
+                (u/n-range 0 1 16)))))
 
+;; 2018.09.18
+(defsound test option
+  (let [gate (impulse (u/dt:kr 1 [1 1 1 1 1 4]))
+        freq (-> (u/dq gate (concat [440 640 940]
+                                    [440 640 940]
+                                    [440 840 1880]
+                                    [440 1680 280]))
+                 (lag-ud 0.2 0.4))
+        snd (reduce #(* %1 (lf-tri %2))
+                    (sin-osc freq)
+                    [12 18 -1/4])
+        [x y] (splay (map #(-> snd (free-verb % %2))
+                          (shuffle (u/n-range 0 1 8))
+                          (u/n-range 0 1 8)))]
+    (rotate2 x y (sin-osc 0.2))))
 
-
-
-
+(defsound test option
+  (let [eff (+ 1 (sin-osc 0.002))]
+    (* 20 (splay (mapcat (fn [x]
+                           (map #(* (sin-osc 0.1 (* x %2 Math/PI)) (sin-osc (* (- x eff)  %)))
+                                (range 150 1200 234)
+                                (shuffle (range 0 2 0.2))))
+                         (take 10 (iterate #(* 1.23 %) 1)))))))

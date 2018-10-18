@@ -14,12 +14,12 @@
 
   (l4/control :work :-room {:set 1})
   (l4/control :drill :-freq {:set 200})
-  (l4/control :work :vol {:dur 1024 :to 0.15})
-  (l4/control :bass  :vol {:dur 512 :from 0 :to 1.0})
-  (l4/control :bass2 :vol {:dur 1024 :to 1.0})
+  (l4/control :work :vol {:dur 256 :to 0.5})
+  (l4/control :bass  :vol {:dur 512 :from 0 :to 0.4})
+  (l4/control :bass2 :vol {:dur 256 :to 1.0})
   (l4/control :bass3 :vol {:dur 1024 :from 1.0 :to 0})
 
-  (l4/control :collapse :vol {:dur 128 :to 0.0625}))
+  (l4/control :collapse :vol {:dur 128 :to 0.125}))
 
 
 (do
@@ -28,8 +28,8 @@
   (l4/control :bass2 :vol {:set 0})
   (l4/control :bass3 :vol {:set 0})
   (l4/control :collapse :vol {:set 0}))
-(recording-stop)
 
+(recording-stop)
 (l4/initialize {})
 (l4/finish)
 
@@ -44,6 +44,35 @@
                                (bit-shift-right c)
                                (bit-and 2r0011)))))))
 
+
+(l4/control :tracker :vol {:dur 16 :to 1.5})
+
+(defsound tracker
+  {:swap-option {:switch-fade-in 0
+                 :switch-fade-out 8
+                 :fade-out-dur 32}
+   :state {:initial (update-state {:count 0})
+           :update update-state}
+   :period 32}
+  (splay
+   (map (fn [count ratio phase]
+          (let [gate2 (impulse (* :f4 count) )]
+            (->  (saw (u/dq (u/throttle :-gate count) (map #(* % 100 ratio)
+                                                           [0.1 50 10 1 100])))
+                 (* (u/sin-r (* :f8 ratio) 128 256)
+                    (u/dq gate2 [1 1/2 1/4])
+                    (env-gen (envelope [0 1 1 0] [0 1e-7 1e-8]) gate2))
+                 ;; (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t2])
+                 ;; (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.7 0.8 4.3])
+                 ;;                  (* ratio 500) (* ratio 2000)) 0.001)
+                 ;; (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [0.002])
+                 (tanh)
+                 (* 2)
+                 )))
+          [1/2 2/3]
+          [5/4 4]
+          (u/n-range 0 1 6))))
+(l4/control :tracker :vol {:dur 16 :to 2.5})
 
 (defsound tracker
     {:swap-option {:switch-fade-in 0
@@ -60,18 +89,16 @@
                    (* (u/sin-r (* :f8 ratio) 128 5120)
                       (u/dq gate2 [1 1/2 1/4])
                       (env-gen (envelope [0 1 1 0] [0 1e-7 1e-8]) gate2))
-                   ;; (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t2])
-                   ;; (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.7 0.8 4.3])
-                   ;;                  (* ratio 500) (* ratio 2000)) 0.001)
-                   ;; (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [0.002])
+                   (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t2 :t3 :t1])
+                   (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.7 0.8 4.3])
+                                    (* ratio 500) (* ratio 2000)) 0.001)
+                   (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [0.002 0.02 0.01])
                    (tanh)
                    (* 2)
                    )))
-          [1/2 2/3]
-          [5/4 4]
+          [4 2 3 3/2 9/2 8]
+          [5/4 4 3/2 2 1 1/2]
           (u/n-range 0 1 6))))
-
-
 
 (defsound tracker
   {:swap-option {:switch-fade-in 0
@@ -85,21 +112,19 @@
           (let [gate2 (impulse (* :f4 count) )]
             (->  (saw (u/dq (u/throttle :-gate count) (map #(* % 100 ratio)
                                                            [0.1 50 10 1 100])))
-                 (* (u/sin-r (* :f8 ratio) 128 8960)
+                 (* (u/sin-r (* :f8 ratio) 128 256)
                     (u/dq gate2 [1 1/2 1/4])
                     (env-gen (envelope [0 1 1 0] [0 1e-7 1e-8]) gate2))
-                 (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t2 :t3 :t1])
-                 (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.7 0.8 4.3])
-                                  (* ratio 500) (* ratio 2000)) 0.003)
-                 (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [0.004 0.02 0.01])
+                 ;; (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t2])
+                 ;; (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.7 0.8 4.3])
+                 ;;                  (* ratio 500) (* ratio 2000)) 0.001)
+                 ;; (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [0.002])
                  (tanh)
                  (* 2)
                  )))
-        [4 2 3 9/2 1 8]
-        [5/4 4 3/2 2 1 1/2]
-        (u/n-range 0 1 6))))
-
-(l4/stop :tracker)
+          [1/2 2/3]
+          [5/4 4]
+          (u/n-range 0 1 6))))
 
 (defsound drill
   {:period 16
@@ -113,7 +138,7 @@
     (-> (sin-osc (* dr freq))
         (u/reduce-> (fn [acc [m1 m2]]
                       (sin-osc (lin-exp acc -1 1 (* m1 freq) (* m2 freq))))
-                    [[1 2] [1/2 5/2] [1/4 5]])
+                    [[1 2] [1/2 2] [1/4 8]])
         (u/switch-> (u/sin-r (/ 1 dur) 0 1)
                     (ringz (* (u/rg-exp (lf-saw (!! (if b2 0.28 0.037))) 1/4 2) freq) 0.002))
         (u/reduce-> (fn [acc [mix room]] (free-verb acc mix room))
@@ -121,6 +146,7 @@
                      [0 0.8]])
         (* 8)
         distort)))
+
 
 (defsound drill
   {:period 16
@@ -130,18 +156,24 @@
    :swap-option {:fade-in-dur 8
                  :switch-dur 4
                  :fade-out-dur 32}}
-  (let [freq (!! (if b3 (* (if (= (mod c0 4) 0) 3 1) 440) 100))]
+  (let [freq (!! (if b3 (* (if (= (mod c0 4) 0) 3 1) 440) 0))]
     (-> (sin-osc (* dr freq))
         (u/reduce-> (fn [acc [m1 m2]]
                       (sin-osc (lin-exp acc -1 1 (* m1 freq) (* m2 freq))))
-                    [[1 2] [1/2 (!! (if b1 7 2))] [1/4 (!! (if b2 7 5))]])
+                    [[1 2] [1/2 7] [1/4 5]])
         (u/switch-> (u/sin-r (/ 1 dur) 0 1)
                     (ringz (* (u/rg-exp (lf-saw (!! (if b2 0.28 0.037))) 1/4 2) freq) 0.002))
         (u/reduce-> (fn [acc [mix room]] (free-verb acc mix room))
-                    [[(!! (if b2 0.1 0)) 0.1]
-                     [0 0.8]])
+                    [[(!! (if b2 0.1 1)) 0.1]
+                     [1 0.8]])
         (* 8)
         distort)))
+
+(l4/control :drill :vol {:dur 256 :to 0.05})
+
+(l4/control :bass2 :vol {:dur 512 :to 0.2})
+(l4/control :work :vol {:dur 512 :to 0})
+(l4/control :collapse :vol {:dur 512 :to 0})
 
 (defsound work
   {:period 32
@@ -157,6 +189,8 @@
         snd (squared (sin-osc (/ dr T)))]
     (-> (* snd env)
         (free-verb 0.8 :-room))))
+
+
 
 (defsound collapse
   {:state {:initial (update-state {:count 0})
@@ -193,9 +227,6 @@
        (tanh (* 1.2 (sin-osc (* dr freq f-env))
                 (env-gen (envelope [0 1 0.5 0] [0 0.25 0.01]) gate)))))))
 
-
-
-
 (defsound bass
   {:period 32
    :synth-option {:type :detune}
@@ -216,18 +247,18 @@
 
 
 
-
-
 (defsound bass2
   {:period 32
    :swap-option {:fade-in-dur 8
                  :switch-dur 4
                  :fade-out-dur 32}}
-  (splay (map #(let [f-env (env-gen (envelope [0 4 1] [0.005 0.01]) (impulse 1 %3))]
+  (splay (map #(let [f-env (env-gen (envelope [0 3 1] [0.005 0.01]) (impulse 1 %3))]
                  (* 8 (sin-osc (* %2 f-env (u/rg-lin (lf-pulse % 0 0.1) 40 50)))))
               (u/n-range 1 2 8)
               (u/n-range 1 4 8)
               (shuffle (u/n-range 0 1 8)))))
+
+
 
 (defsound bass3
       {:period 16
@@ -243,142 +274,5 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;; ---------------------------
-
-(comment
-  (defsound beats
-    {:swap-option {:switch-fade-in 0
-                   :switch-fade-out 4
-                   :fade-out-dur 32}
-     :state {:initial (update-state {:count 0})
-             :update update-state}
-     :period 32}
-    (splay
-     (map (fn [count ratio]
-            (let [gate2 (impulse (* :f4 count))]
-              (->  (saw (u/dq (u/throttle :-gate count) (map #(* % 100 ratio)
-                                                             [0.1 50 10 1 100])))
-                   (* (u/sin-r (* :f8 ratio) 128 :-max-ratio)
-                      (u/dq gate2 [1 1/2 1/4])
-                      (env-gen (envelope [0 1 1 0] [0 1e-7 1e-8]) gate2))
-                   ;; (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t2 :t1])
-                   ;; (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.7 0.8 4.3])
-                   ;;                  (* ratio 500) (* ratio 2000)) :-ringz-delay)
-                   ;; (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [0.002 :-mix2 0.01])
-                   (tanh)
-                   (* 2)
-                   )))
-          [1/2 2/3]
-          [5/4 4])))
-
-  (l4/control :beats :-ringz-delay {:dur 128 :to 0.003})
-
-
-  (defsound beats
-    {:swap-option {:switch-fade-in 0
-                   :switch-fade-out 4
-                   :fade-out-dur 32}
-     :state {:initial (update-state {:count 0})
-             :update update-state}
-     :period 32}
-    (splay
-     (map (fn [count ratio phase]
-            (let [gate2 (impulse (* :f8 count))]
-              (->  (saw (u/dq (u/throttle :-gate count) (map #(* % 100 ratio)
-                                                             [0.1 50 10 1 100])))
-                   (* (u/sin-r (* :f8 ratio) 128 5120)
-                      (u/dq gate2 [1 1/2 1/4])
-                      (env-gen (envelope [0 1 1 0] [0 1e-7 1e-8]) gate2))
-                   (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t1 :t3 :t2])
-                   (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.7 0.8 4.3])
-                                    (* ratio 500)
-                                    (* ratio 2000)) 0.002)
-                   (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [0.001 0.02 0.01])
-                   (tanh)
-                   (* 4))))
-          [4 2 3 1 8 4]
-          [5/4 4 1 1/2 2/3 3/2]
-          (u/n-range 0 1 6))))
-
-  (defsound beats
-    {:swap-option {:switch-fade-in 0
-                   :switch-fade-out 4
-                   :fade-out-dur 32}
-     :state {:initial (update-state {:count 0})
-             :update update-state}
-     :period 32}
-    (splay
-     (map (fn [count ratio phase]
-            (let [gate2 (impulse (* :f8 count))]
-              (->  (saw (u/dq (u/throttle :-gate count) (map #(* % 100 ratio)
-                                                             [0.1 50 10 1 100])))
-                   (* (u/sin-r (* :f8 ratio) 512 4096)
-                      (env-gen (envelope [0 1 1 0] [0 1e-7 1e-8]) gate2))
-                   (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t1 :t3])
-                   (ringz (u/rg-exp (u/m-map lf-pulse [0.3 0.6 0.7 4.3])
-                                    (* ratio 500) (* ratio 2000))
-                          :-ring-decay)
-                   (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [:-mix1 :-mix2 :-mix3])
-                   (tanh)
-                   (* 4))))
-          [8 4 6 2 16 8]
-          [2 4 1/2 3 1/2 3/2]
-          (u/n-range 0 1 6))))
-
-  (defsound beats
-    {:swap-option {:switch-fade-in 0
-                   :switch-fade-out 32
-                   :fade-out-dur 32}
-     :period 32}
-    (splay
-     (map (fn [count ratio phase]
-            (let [gate2 (impulse (* :f4 count))]
-              (->  (saw (u/dq (u/throttle :-gate count) (map #(* % 100 ratio) [0.1 50 10 1 100])))
-                   (* (u/sin-r (* :f8) 128 4096) (env-gen (envelope [0 1 1 0] [0 1e-7 1e-8]) gate2))
-                   (u/reduce-> (fn [acc x] (+ acc (* 1/4 (delay-n acc x x)))) [:t1 :t3 :t2])
-                   (ringz (u/rg-exp (u/m-map lf-pulse [0.8 0.7 0.3 4.3])
-                                    (* ratio 500)
-                                    (* ratio 4000))
-                          0.004)
-                   (u/reduce-> (fn [acc x] (free-verb acc x 0.01)) [:-mix1 :-mix2 :-mix3])
-                   (tanh)
-                   (* 4))))
-          [4 2 1 3 8 4]
-          [5/4 4 1 1/2 2/3 3/2]
-          (u/n-range 0 1 6)))))
-
-(defn update-state [{:keys [count]}]
-  (let [c (inc count)
-        pairs (fn [prefix f]
-                (map (fn [x] { (keyword (str prefix x)) (f x) })
-                     (range 4)))]
-    (-> {:count c}
-        (into (pairs "b" #(bit-test c %)))
-        (into (pairs "c" #(->> %
-                               (bit-shift-right c)
-                               (bit-and 2r0011)))))))
-
-(def option {:swap-option {:switch-dur 8}
-             :state {:initial (update-state {:count 0})
-                     :update update-state}})
-(def option-d (merge option {:synth-option {:type :detune}}))
 
 

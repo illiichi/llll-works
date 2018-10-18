@@ -13,9 +13,11 @@
 (l4/initialize {:osc-client false})
 (l4/finish)
 
-(recording-start (str "/home/maeda/code/clojure/llll-works/record/"
+(recording-start (str "/home/maeda/code/clojure/llll-work/record/"
                       (.format (java.text.SimpleDateFormat. "yyyyMMdd_HHmmss") (java.util.Date.))
                       ".wav"))
+
+(recording-stop)
 
 (defn update-state [{:keys [count]}]
   (let [c (inc count)
@@ -66,14 +68,12 @@
   (let [freq (latch:ar (u/sin-r 0.3 440 2200) (impulse 1/7))]
     (pan-gau (u/sin-r 0.06 -2 2) (sin-osc freq))))
 
-(l4/stop :flow)
-
-(l4/control :flow :vol {:dur 16 :to 1})
 
 (defsound flow option
-  (let [freq (latch:ar (u/sin-r 0.3 :-freq :-freq2) (impulse 0.05))]
-     (pan-gau (u/sin-r 0.06 -2 2) (sin-osc (* %2 freq)))))
-
+  (mm-map #(let [freq (latch:ar (u/sin-r 0.3 440 2200) (impulse %))]
+             (pan-gau (u/sin-r % -2 2) (sin-osc (* freq %2))))
+          [0.05 0.07]
+          [1 3 1/4]))
 
 (defsound flow option
   (mm-map #(let [freq (latch:ar (u/sin-r 0.3 440 2200) (impulse %))]
@@ -88,23 +88,51 @@
     (-> (pan-gau pos (sin-osc freq (u/rg-lin (sin-osc car-freq) 0 (* 2 Math/PI))))
         (free-verb 0.5 0.1))))
 
+
+
+
+(l4/control :strong-flow :vol {:dur 64 :to 0.6})
+
+
 (defsynth-l4 string
   [freq 440 long 1]
-  (let [f-env (env-gen (envelope [0 4 1] [0.001 0.18]))
+  (let [shake 0.0001
+        f-env (env-gen (envelope [0 4 1] [0.001 0.18]))
         dur (* long dur)]
     (+ (pan2 (* (sin-osc freq)
                 (env-gen (env-perc 0.08 dur) :action FREE)))
-       (-> (repeatedly 5 #(saw (* freq (u/rg-exp (pink-noise) 0.995 1.005))))
+       (-> (repeatedly 5 #(saw (* freq (u/rg-exp (pink-noise) (- 1 shake) (+ 1 shake)))))
+           (lpf (* freq f-env))
+           (* (env-gen (env-perc 0.01 dur)))))))
+
+(defsynth-l4 string
+  [freq 440 long 1]
+  (let [shake 0.0008
+        f-env (env-gen (envelope [0 4 1] [0.001 0.18]))
+        dur (* long dur)]
+    (+ (pan2 (* (sin-osc freq)
+                (env-gen (env-perc 0.08 dur) :action FREE)))
+       (-> (repeatedly 5 #(saw (* freq (u/rg-exp (pink-noise) (- 1 shake) (+ 1 shake)))))
            (lpf (* freq f-env))
            (* (env-gen (env-perc 0.01 dur)))))))
 
 (defpattern musician
   {:table {:a (synth string)}
+   :swap-option {:fade-out-dur 64}
    :period 64}
   (&| (map #(->> (| :a :a|5)
                  (=| :long [2 1.1])
                  (=| :freq (map midi->hz %1)))
            [[77 79] [77 72] ])))
+
+
+
+(l4/stop :musician)
+
+(l4/control :musician :vol {:dur 16 :to 0.3})
+
+
+
 
 (defsound forest option-d
   (u/m-map (fn [phase i]
@@ -118,7 +146,21 @@
          (u/n-range 0 1 10)
          (shuffle (u/n-range 0 1.5 10))))
 
-(defsound forest option
+
+
+
+
+
+
+
+
+
+
+
+(defsound forest
+  {:swap-option {:switch-dur 256}
+   :state {:initial (update-state {:count 0})
+           :update update-state}}
   (+ (-> (splay (map #(let [gate (dust 0.8)
                             freq (+ (midicps (round (latch:ar (u/sin-r 1.08 %2 (* 3 %2)) gate) 1))
                                     (u/sin-r 3.3 0.9 1))]
@@ -132,3 +174,12 @@
          (lpf (u/sin-r 0.2 300 1500)))
      (* (u/sin-r 0.08 0.25 1) (sin-osc 240)
         (sin-osc (* 80 (sin-osc 43))))))
+
+
+
+
+
+
+
+
+

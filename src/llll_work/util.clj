@@ -137,3 +137,13 @@
 
 (defn n-range [min max num]
   (range min max (/ (- max min) num)))
+
+(defcgen rotation [pos {:default 0} source {:default 0}]
+  (:ar (let [[x y] source] (rotate2 x y pos))))
+
+(defmacro detune-rotate [pos f]
+  (let [d 0.01]
+    `(let [body# (fn [~'dr] ~f)]
+       (rotate2 (body# (- 1 ~d))
+                (body# (+ 1 ~d))
+                ~pos))))

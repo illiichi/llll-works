@@ -97,8 +97,6 @@
                   [300 2200 370 100])
       (tanh)))
 
-(l4/control :test :vol {:dur 16 :to 1})
-
 
 (defsound test option-d
   (+ (m-map (fn [freq] (* (sin-osc freq) (sin-r (sin-r 0.1 (* :-min-r freq) (* :-max-r freq)) 0.3 1)
@@ -135,8 +133,6 @@
                           (sin-osc (* freq (sin-osc (* fm-freq (sin-osc fm-freq2))))))
                        freqs)))))
 
-(l4/control :test :vol {:dur 128 :to 1})
-
 (defsound test option-d
   (let [gate (impulse 1)
         f-env (env-gen (envelope [0 2 1 1 2 1] [0 0.08 0.1 0.08 0.2]) gate)]
@@ -161,8 +157,6 @@
                     (lf-pulse 1/8 %)))
               (n-range 0 1 20)
               (take 20 (iterate #(* 1.2 %) 500)))))
-
-(l4/control :test :vol {:dur 64 :to 0})
 
 (defsound test option-d
   (let [n 12
