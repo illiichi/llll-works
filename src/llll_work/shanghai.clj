@@ -60,8 +60,6 @@
                   :long 1
                   :vol 1/2}))))
 
-
-
 (defsound waza
   option-d
   [(section
@@ -117,9 +115,10 @@
                   (* 8) distort)))])
 
 
+
 (defsound chill
   {:swap-option {:switch-fade-in 8, :switch-fade-out 4, :fade-out-dur 32},
-   :period 64,
+   :period 32,
    :synth-option {:type :detune}}
   (let [snd (bpf (white-noise) (* dr [1000 2000 10000]) (u/rg-exp (lf-saw -1/10) 1 0.01))]
     (-> snd
@@ -127,6 +126,8 @@
         (comb-l 1/8 1/8 1.2)
         mix
         tanh)))
+
+
 
 (defsound wakare option
   (-> (let [[x y] (splay (* (reductions (fn [acc x] (+ acc (* 1/2 (moog-ff (delay-n acc 0.2 0.2)
@@ -140,19 +141,21 @@
       (* (u/sin-r 0.02 1 10))
       (distort)))
 
+
 (defsound nami
   {:swap-option {:switch-fade-in 4, :switch-fade-out 4, :fade-out-dur 32}, :period 64}
-  (-> (rotate2 (rlpf (white-noise) (u/rg-exp (sin-osc 0.057) 200 1800))
+  (-> (rotate2 (rlpf (white-noise) (u/rg-exp (sin-osc 0.057) 50 1800))
                (rlpf (white-noise) (u/rg-exp (sin-osc 0.03) 100 1000))
-               (sin-osc (u/rg-exp (sin-osc 0.008) 0.03 1)))
+               (sin-osc (u/rg-exp (sin-osc 0.064) 0.03 1)))
       (* 2)))
+
 
 (defsound waza
   {:state {:initial (update-state {:count 0})
            :update update-state}
    :synth-option {:type :detune}
-   :period 128}
-  [(section {:dur 3}
+   :period 8}
+  [(section {:dur 0}
             (let [snd (u/m-map #(let [gate (lf-pulse %2 1/2 1/4)
                                       freq (latch:ar (u/rg-exp (sin-osc (!! (if b0 8.3 0.3)))
                                                                100 2000) gate)]
@@ -165,7 +168,7 @@
                               [0.01 0.02]
                               [(!! (if b2 1000 500)) (!! (if b0 800 3200)) 10])
                   (* 8) distort)))
-   (section {:dur 0}
+   (section {:dur 1}
     (let [f-env (env-gen (envelope [0 6 1] [(!! (if b0 0.05 0.4)) (!! (if b2 0.1 0.5))]))
           freq (* f-env (u/rg-exp (lf-saw (!! (if b2 -4 16))) 800 (!! (if b0 1600 520))))
           snd (u/switch (lf-pulse 8 0 1/4) (sin-osc (* dr freq))
@@ -177,12 +180,13 @@
           (u/reduce-> (fn [acc x] (comb-l acc x x 0.3)) [0.01 0.02])
           (* 8) distort)))])
 
+
 (defsound waza
   {:state {:initial (update-state {:count 0})
            :update update-state}
    :synth-option {:type :detune}
    :swap-option {:switch-fade-in 0, :switch-fade-out 0, :fade-out-dur 128}
-   :period 64}
+   :period 512}
   [(section {:dur 7}
             (let [freq (u/rg-exp (u/m-map lf-saw [2.3 3.8 2.8])
                                  (!! (if b1 100 800))
@@ -195,4 +199,9 @@
                               (u/reduce-> (fn [acc x] (ringz acc x dur)) [(* 2 freq) freq]))
                   (free-verb 1 10)
                   (* 8) distort)))])
+
+(do
+  (l4/stop :bang)
+  (l4/stop :waza))
+
 
