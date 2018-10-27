@@ -1,4 +1,4 @@
-(ns llll-work.sin-osc-only
+(ns llll-work.algorave-beijin
   (require [llll.core :as l4]
            [llll.clay.clay :as cl]
            [llll.macro.defsound :refer :all]
@@ -8,12 +8,12 @@
   (use [overtone.core]))
 
 (connect-external-server "localhost" 57110)
-(connect-external-server "192.168.100.102" 57110)
-
-(connect-external-server "192.168.30.17" 57110)
 
 (kill-server)
 (l4/finish)
+
+(l4/initialize {:osc-client false
+                :osc-path "/hello"})
 
 (l4/initialize {})
 
@@ -34,50 +34,26 @@
 (def option-d (merge option {:synth-option {:type :detune}}))
 
 
-
-(l4/stop :music)
-
-(defcgen pan-exp [pos {:default 0}
-                in {:default 0}]
-  (:ar (let [x (abs pos)
-             a (exp (* -14 x))
-             b (exp (* -8 x))]
-         (* in [(select (not-pos? pos) [a b])
-                (select (not-pos? pos) [b a])]))))
-
-(defcgen pan-gau [pos {:default 0}
-                  in {:default 0}]
-  (:ar (let [x (squared pos)
-             a (exp (* -14 x))
-             b (exp (* -8 x))]
-         (* in [(select (not-pos? pos) [a b])
-                (select (not-pos? pos) [b a])]))))
-
-(defn mm-mix [xss]
-  (->> (u/transpose xss)
-       (map mix)))
-
-(defn mm-map [f & xss]
-  (mm-mix (apply map f xss)))
-
-(defsound flow option
-  (let [freq (latch:ar (u/sin-r 0.3 440 2200) (impulse 1/7))]
-    (pan-gau (u/sin-r 0.06 -2 2) (sin-osc freq))))
-
-(defsound flow option
-  (mm-map #(let [freq (latch:ar (u/sin-r 0.3 440 2200) (impulse %))]
-             (pan-gau (u/sin-r % -2 2) (sin-osc (* freq %2))))
-          [0.05 0.07 0.19]
-          [1 3/2 7/4]))
-
-(defsound flow option
-  (mm-map #(let [freq (latch:ar (u/sin-r 0.3 440 2200) (impulse %))]
-             (pan-gau (u/sin-r % -2 2) (sin-osc (* freq %2))))
-          [0.05 0.07 0.19 0.09]
-          [1 3/2 5/3 7/4 9/5]))
+(defsound music option
+  (splay (let [n 4]
+           (-> (map #(* (sin-osc 0.008 %)
+                        (sin-osc (* (* 400 (sin-osc 0.01 %))
+                                    (sin-osc (* %2 100)))))
+                    (range 1 n)
+                    (u/n-range 0 3 n))
+               (* n)))))
 
 (defsound music option
-  (splay (let [n 20]
+  (splay (let [n 4]
+           (-> (map #(* (+ (sin-osc 0.4 %) (sin-osc 0.008 %))
+                        (sin-osc (* (* 400 (sin-osc 0.01 %))
+                                    (sin-osc (* %2 100)))))
+                    (range 1 n)
+                    (u/n-range 0 3 n))
+               (* n)))))
+
+(defsound music option
+  (splay (let [n 4]
            (-> (map #(* (+ (sin-osc 0.4 %) (sin-osc 0.008 %))
                         (sin-osc (* (* 400 (* (+ (sin-osc 0.01 %)
                                                  (sin-osc 0.03 %)
@@ -107,13 +83,6 @@
                     (shuffle (range 0.01 0.05 0.002))
                     (shuffle (range 1 8))))))
 
-(defsound keep
-  {:swap-option {:switch-dur 128}}
-  (* 5 (splay (map #(* %1 (sin-osc %2) (sin-osc (* %3 600 (ranged-rand 0.9 1.1))))
-                    (shuffle (range 0 1 0.1))
-                    (shuffle (range 0.01 0.05 0.002))
-                    (shuffle (range 1 8))))))
-
 (defsound dark option
   (let [eff (+ 1 (sin-osc 0.002))]
     (* 20 (splay (mapcat (fn [x]
@@ -121,7 +90,6 @@
                                 (range 150 1200 234)
                                 (shuffle (range 0 2 0.2))))
                          (take 10 (iterate #(* 1.23 %) 1)))))))
-
 
 (defsound radio option-d
   (let [base-freq (+ 200 (* (sin-osc 0.02)
@@ -137,10 +105,6 @@
                       (range 1 10)
                       (iterate #(* 1.2 %) 0.2))))))
 
-(defsound spin option-d
-  (reduce (fn [acc x] (sin-osc (*  x acc))) (sin-osc (* 100))
-d          [2000 8000 500 ]))
-
 (defsound typhoon option
   (* 32 (splay
          (tanh (* 640 (let [freq 1000]
@@ -154,23 +118,6 @@ d          [2000 8000 500 ]))
                                        (u/rg-exp (sin-osc 0.134) 1 18.2)
                                        ])
                              (shuffle (u/n-range 1e-8 1 6)))))))))
-
-
-(defsound talk option-d
-  (let [saw (fn [freq]
-              (reduce (fn [acc x]
-                        (let [phase 0.5
-                              d (* (sin-osc 0.3 phase) 0.02)]
-                          (+ acc
-                             (* (/ 1 x)
-                                (sin-osc (* (+ 1 (* 2 x) d) dr freq))))))
-                      (sin-osc freq)
-                      (range 2 16)))
-        base-freq (+ 2300 (* (+ (sin-osc 0.37)
-                                (sin-osc 1.37)
-                                (sin-osc 0.2)) 3000))]
-    (* 1/2 (sin-osc (* base-freq (* (sin-osc 0.07) (sin-osc 80))))
-       (sin-osc 0.8))))
 
 (defsound typhoon
   {:swap-option {:switch-dur 8}}
@@ -186,30 +133,3 @@ d          [2000 8000 500 ]))
                                        ;; (u/rg-exp (sin-osc 0.134) 1 8.2)
                                        ])
                              (shuffle (u/n-range 1e-8 1 6)))))))))
-
-(defsound alart option-d
-  (splay (map #(* 520 (reduce (fn [acc x] (* acc
-                                             (sin-osc (* %2 687))
-                                             (sin-osc 1287)
-                                             (sin-osc (* %2 %2 33))))
-                              (sin-osc % %2)
-                              (range 1 16)))
-              [(* 230 (sin-osc 0.3))
-               (* 3 (sin-osc 0.1))
-               (* 30 (sin-osc 1.3))
-               (* 10000 (sin-osc 0.03))]
-              (u/n-range 1e-5 1 4))))
-
-(defsound with-saw option-d
-  (let [freq 1000]
-    (* (reduce (fn [acc x] (+ acc (sin-osc (* x freq dr))))
-               (take 8 (reductions * (cycle [1 1.3 1.2 0.9 0.8]))))
-       (+ (reduce * (repeatedly 30 #(sin-osc (* 3.8 (sin-osc 0.02)))))
-          (reduce * (repeatedly 30 #(sin-osc (* 1.8 (sin-osc 0.4)))))))))
-
-
-
-
-
-
-
